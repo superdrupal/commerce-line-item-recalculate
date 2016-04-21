@@ -1,0 +1,28 @@
+{ "rules_adjust_sell_price_of_product_shirt_graphic_line_item_value" : {
+    "LABEL" : "Adjust sell price of product - Shirt graphic line item value",
+    "PLUGIN" : "reaction rule",
+    "OWNER" : "rules",
+    "TAGS" : [ "Price" ],
+    "REQUIRES" : [ "rules", "commerce_line_item", "commerce_product_reference" ],
+    "ON" : { "commerce_product_calculate_sell_price" : [] },
+    "IF" : [
+      { "entity_is_of_bundle" : {
+          "entity" : [ "commerce-line-item" ],
+          "type" : "commerce_line_item",
+          "bundle" : { "value" : { "shirt" : "shirt" } }
+        }
+      },
+      { "entity_has_field" : { "entity" : [ "commerce-line-item" ], "field" : "field_graphic" } },
+      { "NOT data_is_empty" : { "data" : [ "commerce-line-item:field-graphic" ] } }
+    ],
+    "DO" : [
+      { "commerce_line_item_unit_price_add" : {
+          "commerce_line_item" : [ "commerce_line_item" ],
+          "amount" : "500",
+          "component_name" : "base_price",
+          "round_mode" : "1"
+        }
+      }
+    ]
+  }
+}

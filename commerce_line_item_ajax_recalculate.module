@@ -1,0 +1,79 @@
+<?php
+
+/**
+ * @file
+ * Recalculates the sell price of the line item on Add to Cart form.
+ */
+
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter().
+ */
+function commerce_line_item_ajax_recalculate_form_commerce_cart_add_to_cart_form_alter(&$form, &$form_state, $form_id) {
+  // AJAXify line item elements.
+  foreach (element_children($form['line_item_fields']) as $field_name) {
+    if (!empty($form['line_item_fields'][$field_name]['#commerce_cart_settings']['field_access'])) {
+      // Append an AJAX callback to each of the line item field widgets
+      // so that we can dynamically calculate pricing on change events.
+      $field_lang = $form['line_item_fields'][$field_name]['#language'];
+      if (count(element_children($form['line_item_fields'][$field_name][$field_lang])) > 0) {
+        foreach (element_children($form['line_item_fields'][$field_name][$field_lang]) as $delta) {
+          foreach (element_children($form['line_item_fields'][$field_name][$field_lang][$delta]) as $sub_field) {
+            $form['line_item_fields'][$field_name][$field_lang][$delta][$sub_field]['#ajax'] = array(
+              'callback' => '_commerce_line_item_ajax_recalculate_line_item_field_refresh',
+            );
+          }
+        }
+      } else {
+        $form['line_item_fields'][$field_name][$field_lang]['#ajax'] = array(
+          'callback' => '_commerce_line_item_ajax_recalculate_line_item_field_refresh',
+        );
+      }
+    }
+  }
+}
+
+/**
+ * Ajax callback: returns AJAX commands when line items fields change.
+ */
+function _commerce_line_item_ajax_recalculate_line_item_field_refresh($form, &$form_state) {
+  $line_item = $form_state['line_item'];
+  $line_item_wrapper = entity_metadata_wrapper('commerce_line_item', $line_item);
+
+  // Pass the line item object to rules to calculate the sale price.
+  rules_invoke_event('commerce_product_calculate_sell_price', $line_item);
+
+  // Load a product wrapper and pseudo replace the commerce_price value
+  // so that we can generate a new render array.
+  $product = commerce_product_load($form_state['default_product_id']);
+  $product_wrapper = entity_metadata_wrapper('commerce_product', $product);
+  try {
+    $product_wrapper->commerce_price->set($line_item_wrapper->commerce_unit_price->value());
+  }
+  catch (Exception $ex) {
+    // Leave the commerce_price field untouched if there were issues setting
+    // the value.
+  }
+
+  // Determine the appropriate class wrappers to use when replacing the price.
+  $replacement_class = drupal_html_class(implode('-', array($form_state['context']['class_prefix'], 'product', 'commerce_price')));
+
+  $classes = array(
+    'commerce-product-field',
+    drupal_html_class('commerce-product-field-' . 'commerce_price'),
+    drupal_html_class('field-' . 'commerce_price'),
+    $replacement_class,
+  );
+
+  $element = field_view_field('commerce_product', $product, 'commerce_price', $form_state['context']['view_mode']);
+
+  // Append the prefix and suffix around existing values if necessary.
+  $element += array('#prefix' => '', '#suffix' => '');
+  $element['#prefix'] = '<div class="' . implode(' ', $classes) . '">' . $element['#prefix'];
+  $element['#suffix'] .= '</div>';
+
+  // Replace the rendered commerce product price field via AJAX.
+  $commands[] = ajax_command_replace('.' . $form_state['context']['class_prefix'] . '-product-commerce-price', drupal_render($element));
+
+  return array('#type' => 'ajax', '#commands' => $commands);
+}

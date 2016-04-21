@@ -1,0 +1,11 @@
+name = Commerce Line Item Ajax Price Recalculate
+description = Recalculates the sell price of the line item via Rules on Add to Cart form.
+package = Commerce (contrib)
+dependencies[] = commerce
+dependencies[] = commerce_line_item
+dependencies[] = commerce_product
+dependencies[] = commerce_price
+dependencies[] = commerce_product_reference
+dependencies[] = entity
+dependencies[] = rules
+core = 7.x
