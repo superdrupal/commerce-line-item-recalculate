@@ -41,6 +41,7 @@ function _commerce_line_item_ajax_recalculate_line_item_field_refresh($form, &$f
   $line_item_wrapper = entity_metadata_wrapper('commerce_line_item', $line_item);
 
   // Pass the line item object to rules to calculate the sale price.
+  drupal_alter('commerce_product_calculate_sell_price_line_item', $line_item);
   rules_invoke_event('commerce_product_calculate_sell_price', $line_item);
 
   // Load a product wrapper and pseudo replace the commerce_price value
